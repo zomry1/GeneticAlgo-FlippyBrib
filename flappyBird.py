@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+MIN_HEIGHT = -110
+MAX_HEIGHT = 831
+MIN_HOR = 0
+MAX_HOR = 400
+SPLIT = 15
 
 import pygame
 from pygame.locals import *  # noqa
@@ -27,6 +32,7 @@ class FlappyBird:
         self.dead = False
         self.sprite = 0
         self.counter = 0
+        self.timeLive = 0
         self.offset = random.randint(-110, 110)
 
     def updateWalls(self):
@@ -34,6 +40,7 @@ class FlappyBird:
         if self.wallx < -80:
             self.wallx = 400
             self.counter += 1
+            print('*****************************************************************************************')
             self.offset = random.randint(-110, 110)
 
     def birdUpdate(self):
@@ -45,6 +52,7 @@ class FlappyBird:
             self.birdY += self.gravity
             self.gravity += 0.2
         self.bird[1] = self.birdY
+        #360 + 130 - X + 10 - 65
         upRect = pygame.Rect(self.wallx,
                              360 + self.gap - self.offset + 10,
                              self.wallUp.get_width() - 10,
@@ -63,8 +71,8 @@ class FlappyBird:
             self.keyboard.release(Key.space)
         '''''
         if not 0 < self.bird[1] < 720:
-            print(self.counter)
-            sys.exit(self.counter)
+            self.dead = True
+            #no need to restart
             '''''''''
             self.bird[1] = 50
             self.birdY = 50
@@ -75,12 +83,12 @@ class FlappyBird:
             self.gravity = 5
             '''''
 
-    def run(self):
+    def run(self,gene):
         clock = pygame.time.Clock()
         pygame.font.init()
         font = pygame.font.SysFont("Arial", 50)
         while True:
-            clock.tick(60)
+            clock.tick(500000000)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
@@ -101,18 +109,36 @@ class FlappyBird:
                              (200, 50))
             if self.dead:
                 self.sprite = 2
+                # 360 + 130 - X + 10 - 65
+                #360+130-x, 600-380
+                distanceFromPass = abs(self.birdY - (360+130 -self.offset + 10 - 65))
+                #print("close to pass", self.birdY - (360+130 -self.offset + 10 - 65))
+                #        print("gene fitness is:",self.timeLive - (1 / 20 *    distanceFromPass  )+ 1000 *self.counter) #time - distnace from open pipe + big bomus on points
+                return (self.timeLive - (1/20 * distanceFromPass  )+ 1000 *self.counter) #end game and return the score
             elif self.jump:
                 self.sprite = 1
             self.screen.blit(self.birdSprites[self.sprite], (70, self.birdY))
             if not self.dead:
                 self.sprite = 0
-            text = "distance from wall is " + str(self.wallx) + "top wall is " + str(self.offset) + "bird y is " + str(self.birdY )
-            print(text)
-            text1 = "horizontal distance " + str(self.birdY - self.offset)
-            print(text1)
+            #text1 = "horizontal distance " + str(self.wallx) + "  height distance " + str(self.birdY - self.offset)
+            #print(text1)
+
+
+            # to get row is height so curr - MIN_HEIGHT / SPLIT
+            # to get coulmn is horizontal so curr - MIN_HORIZONTAL / SPLIT
+            #choose by gene
+            try:
+                if (gene[round((self.wallx - MIN_HOR) / SPLIT) - 1][round(((self.birdY - self.offset) - MIN_HEIGHT) / SPLIT) - 1] == 1):
+                    self.keyboard.press(Key.space)
+                    self.keyboard.release(Key.space)
+            except:
+                print("horizontal index:",round((self.wallx - MIN_HOR) / SPLIT) - 1,"height index",round(((self.birdY - self.offset) - MIN_HEIGHT) / SPLIT) - 1)
+
             self.updateWalls()
             self.birdUpdate()
+            self.timeLive += 1
             pygame.display.update()
 
-if __name__ == "__main__":
-    FlappyBird().run()
+
+def start(gene):
+    return FlappyBird().run(gene)
